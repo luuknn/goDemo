@@ -8,7 +8,7 @@ import (
 func ready(w string, sec int64) {
 	secs := time.Duration(sec) * time.Second
 	time.Sleep(secs)
-	fmt.Println(w, "is ready")
+	fmt.Println(w, "is ready!")
 
 }
 func main() {
