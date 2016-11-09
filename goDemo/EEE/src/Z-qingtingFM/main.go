@@ -186,6 +186,6 @@ func (this *QingTingFM) getAajxAddr() string {
 
 //-----------------------------------------------------------------
 func main() {
-	qtfm := QingTingFM{Channel: 135188, ID: 638001}
+	qtfm := QingTingFM{Channel: 105674, ID: 110000}
 	qtfm.Crawl()
 }
