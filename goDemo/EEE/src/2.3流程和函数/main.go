@@ -264,14 +264,88 @@ return true
 return false
 }
 //声明的函数类型在这个地方当了一个参数
-func filter(slice []int,f testInt) []int{
+func filter(slice []int, f testInt) []int {
+    var result []int
+    for _, value := range slice {
+        if f(value) {
+            result = append(result, value)
+        }
+    }
+    return result
+}
+func main(){
+slice :=[]int {1,2,3,4,5,7}
+fmt.Println("slice =",slice)
+odd :=filter(slice,isOdd)//函数当值来传递
+fmt.Println("Odd elements of slice are:",odd)
+even:=filter(slice,isEven)//函数但值来进行传递
+fmt.Println("Even elements of slice are :",even)
+}
+//函数当作值和类型在我们写一些通用接口的时候非常有用 通过上面的例子我们看到testInt这个类型是一个函数类型 然后两个filter函数的参数和返回值与testInt类型是一样的 但是我们可以实现很多种逻辑 这样使得我们的程序变得非常灵活
 
-
+//panic和recover
+//Go没有像java那样的异常机制 它不能抛出异常 而是使用了panic和recover机制 一定要记住 你应该把它当做最后的手段来使用 也就是说 你的代码中应当没有或者很少有panic的东西 这是个强大的工具 请明智的使用它 那么我们该如何使用它
+//panic
+//是一个内建函数 可以中断原有的控制流程 进入一个令人恐慌的流程中 
+//当函数F调用panic 函数F的执行被中断 但是F的延迟函数会正常执行 然后F返回到调用它的地方
+//在调用的地方 F的行为就像调用了panic 这一过程继续向上 直到发生panic和goroutine
+//中所有调用的函数返回 此时 程序退出 恐慌可以直接调用panic产生 也可以运行时错误产生 例如访问越界的数组
+//recover
+//是一个内建函数 可以让进入恐慌的流程中的goroutine恢复过来
+//recover 仅仅在延迟函数中有效 在正常的执行过程中 调用recover会返回nil
+//没有其他任何效果 如果当前的goroutine陷入恐慌 调用recover可以捕获到panic的输入值并且恢复正常的执行
+//下面这个函数演示了如何在过程中使用panic
+var user =os.Getenv("USER")
+func init(){
+if user ==""{
+panic ("no value for $USER")
+}
+}
+//下面这个函数检查作为其参数的函数在执行时是否会产生panic
+func throwsPanic(f func()) (b bool){
+defer func(){
+if x:=recover();x!=nil{
+b=true
+}
+}()
+f()//执行函数f 如果d中出现了panic 那么就可以恢复过来
+return
 }
 
+//main函数和init函数
+//Go里面有两个保留函数 init函数 能够应用于所有的package和main函数（只能应用于packagemain）
+//这两种函数在定义时 不能有任何的参数和返回值 虽然一个package 里面可以写任意多个init函数 但
+//无论是对于可读性还是维护性来说 我们都强烈建议用户在一个package的 每个文件中只写一个init函数
+//Go程序 会自动调用 init 和main 
+//程序的初始化和执行都起始于main包。如果main包还导入了其它的包，那么就会在编译时将它们依次导入。有时一个包会被多个包同时导入，那么它只会被导入一次（例如很多包可能都会用到fmt包，但它只会被导入一次，因为没有必要导入多次）。当一个包被导入时，如果该包还导入了其它的包，那么会先将其它包导入进来，然后再对这些包中的包级常量和变量进行初始化，接着执行init函数（如果有的话），依次类推。等所有被导入的包都加载完毕了，就会开始对main包中的包级常量和变量进行初始化，然后执行main包中的init函数（如果存在的话），最后执行main函数。
 
-
-
+//import
+//我们在写Go代码的时候 经常使用到import这个命令来导入包文件 而我们经常看到的方式 参考如下
+import("fmt")
+//然后我们代码里面可以通过如下的方式进行调用
+fmt.Println("hello world")
+//上面这个fmt是Go语言的标准库 其实是goroot下去加载该模块
+//Go还支持如下两种方式来加载自己写的模块
+//1 相对路径 import "./model" //当前文件同一目录的model目录 但是不建议这种方式来import
+//2 绝对路径 import "shorturl/model" //加载gopath/src/shorturl/model模块
+//上面展示了一些import常用的几种方式 但还有一些特殊的import 让很多新手很费解
+//1 点操作
+import(
+. "fmt"
+)//点操作的含义就是 这个包导入之后 调用这个包的函数时可以省略前缀的包名
+//fmt.Println("hello world")可以省略的写成 Println("hello world")
+//2.别名操作 别名操作顾名思义 我们可以把包名命名成另一个我们用起来很容易记忆的名字
+import(
+f "fmt"
+)
+//别名操作的话调用包函数时 前缀变成了我们的前缀 即f.Println("hello world")
+//3 操作
+//这个操作经常是很多人费解的一个操作符 请看下面这个import
+import(
+"database/sql"
+	_"github.com/ziutek/mymysql/godrv"
+)
+//_操作其实是引入该包 而不是直接使用包里面的函数 而是调用了该包的init函数
 
 
 
