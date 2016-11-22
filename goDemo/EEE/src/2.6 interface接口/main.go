@@ -452,7 +452,132 @@ empty=w
 //4 反射的第一条规则
 //从接口值到反射对象的反射
 //在基本层面上 反射只是一个检查存储在接口变量中的类型和值的 算法。
-//从头说起 reflect包中有两个类型需要了解 type和value
+//从头说起 reflect包中有两个类型需要了解 type和value 这两个类型使得可以访问接口变量的内容
+//还有两个简单的函数 reflect.TypeOf 和 reflect.ValueOf
+//从接口值中分别获取reflect.Type 和reflect.Value 
+//同样从 reflect.Value也很容易能够获得reflect.Type 不过这里让value和Type在概念上分离了
+//从TypeOf开始
+package main
+
+import (
+	"fmt"
+	"reflect"
+)
+
+func main() {
+	var x float64 = 3.4
+	fmt.Println("type:", reflect.TypeOf(x))
+}
+//程序打印 type:float64 
+//接口在哪里呢 看起来程序传递了一个float64类型的变量x 而不是一个接口值
+//但是 它确实就在哪里 reflect.TypeOf 的声明包含了一个空接口
+func TypeOf(i interface{}) Type
+//当调用typeof方法的时候 x首先存储于一个作为参数传递的空接口中 用来还原类型信息
+//valueof 函数 当然就是还原那个值  
+package main
+
+import (
+	"fmt"
+	"reflect"
+)
+
+func main() {
+	var x float64 = 3.4
+	v := reflect.ValueOf(x)
+	fmt.Println("type:", v.Type())
+	fmt.Println("kind is float64", v.Kind() == reflect.Float64)
+	fmt.Println("value:", v.Float())
+}
+//type float64 tre 3.4
+//反射库有着若干特性 值得特别说明 首先为了保持 API的简洁
+var x uint8 = 'x'
+v := reflect.ValueOf(x)
+fmt.Println("type:", v.Type())                            // uint8.
+fmt.Println("kind is uint8: ", v.Kind() == reflect.Uint8) // true.
+x = uint8(v.Uint())                                       // v.Uint returns a uint64.
+type MyInt int
+var x MyInt = 7
+v := reflect.ValueOf(x)
+//反射的第二条规则
+//2从反射对象 到接口值的反射 如同物理中的反射 Go的反射 也存在自己的镜像
+//reflect.Value 可以使用interface方法还原接口值 方法打包类型和值信息到接口表达中 并返回这个结果4
+func (v value) Interface()interface{}
+//因此可以这样
+y:=v.Interface().(Float64)//y将为类型float64
+fmt.Println(y)
+//然而，还可以做得更好。fmt.Println，fmt.Printf 和其他的打印方法都是以一个空接口值作为参数的，由 fmt 包在内部解包的方式就像之前的例子一样。因此正确的打印 reflect.Value 内容的方法就是将 Interface 方法的结果传递给格式化打印：
+fmt.Println(v.Interface())
+//（为什么不是 fmt.Println(v)？因为 v 是一个 reflect.Value；这里希望是它保存的实际的值。）由于值是 float64，如果需要的话，甚至可以使用浮点格式化：
+fmt.Printf("value is %7.1e\n", v.Interface())
+//然后就得到这个
+3.4e+00
+//再次强调 对于v.interface()无需断言其为float64
+
+//反射的第三条规则
+//要想修改反射值 其值 必须可以设置
+func main() {
+	var x float64 = 3.4
+	v := reflect.ValueOf(x)
+	v.SetFloat(6.4)
+}
+//panic setfloat using unaddressible value
+//问题在于 6.4不能地址化 在于v不可设置 设置性是反射值的一个属性 并不是所有的反射值有它
+var x float64 = 3.4
+v := reflect.ValueOf(x)
+fmt.Println("settability of v:" , v.CanSet())
+//对不可设置值调用 Set 方法会有错误。但是什么是设置性？
+//设置性有一点点像地址化，但是更严格。这是用于创建反射对象的时候，能够修改实际存储的属性。设置性用于决定反射对象是否保存原始项目。当这样
+//反射可能很难理解 但是语言做了它应该做的 尽管底层的实现被 反射的type和Value隐藏了
+//务必记得反射值需要某些内容的地址来修改它指向的东西
+
+//7结构体
+//在之前的例子中 v本身不是指针 它只是从一个指针中获取的 这种情况更加常见的是当使用反射
+//修改结构体的字段的时候 也就是 当有结构体的地址的时候 可以修改它的字段
+//这里有个分析结构值T的简单例子 由于希望等下对结构体进行修改 所以从它的地址创建 反射对象 设置了 typeOfT为其类型 然后用直接的方法调用来遍历字段
+//注意从结构类型中解析字段名称 但是字段本身是原始的reflect.Value 对象
+package main
+
+import (
+	"fmt"
+	"reflect"
+)
+
+func main() {
+	type tt struct {
+		A int
+		B string
+	}
+	t := tt{23, "skidoo"}
+	s := reflect.ValueOf(&t).Elem()
+	s.Field(0).SetInt(77)
+	typeOfT := s.Type()
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+		fmt.Printf("%d:%s %s=%v\n", i, typeOfT.Field(i).Name, f.Type(), f.Interface())
+	}
+}
+//如果修改程序使得s创建于t 而不是&t 调用setInt会失败 因为t的字段 不可设置
+//8 总结
+//再次提示 反射的规则如下
+//从接口值到反射对象的反射
+//从反射对象到接口值的反射
+//为了修改反射对象 其值必须可以设置
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
