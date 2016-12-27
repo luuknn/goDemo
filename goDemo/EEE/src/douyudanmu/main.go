@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	roomid = flag.Int("roomid", 231464, "房间号")
+	roomid = flag.Int("roomid", 258090, "房间号")
 )
 
 // 默认弹幕服务器
