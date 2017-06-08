@@ -2,6 +2,7 @@ package main
 
 //import (
 //	"fmt"
+//	"log"
 //	"net/http"
 //	"time"
 //)
@@ -24,9 +25,25 @@ package main
 //</html>`
 //	fmt.Fprintln(w, html)
 //}
+//func loggingHandler(next http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		start := time.Now()
+//		log.Printf("Started %s %s", r.Method, r.URL.Path)
+//		next.ServeHTTP(w, r)
+//		log.Printf("Comleted %s in %v", r.URL.Path, time.Since(start))
+//	})
+//}
+//func hook(next http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		log.Println("before hook")
+//		next.ServeHTTP(w, r)
+//		log.Println("after hook")
+//	})
+//}
+//
 //func main() {
 //	mux := http.NewServeMux()
-//	mux.Handle("/", http.HandlerFunc(index))
+//	mux.Handle("/", hook(loggingHandler(http.HandlerFunc(index))))
 //	mux.HandleFunc("/text", text)
 //	server := &http.Server{
 //		Addr:         ":8000",
@@ -205,21 +222,47 @@ http.Handler是一个接口，接口方法我们熟悉的为serveHTTP。返回�
 因为go中的函数也可以当成变量传递或者或者返回，因此也可以在中间件函数中传递定义好的函数，只要这个函数是一个handler即可，
 即实现或者被handlerFunc包裹成为handler处理器。
 
+func middlewareHandler(next http.Handler) http.Handler{
+return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+//执行handler之前的逻辑
+next.ServeHTTP(w,r)
+//执行完毕handler后的逻辑
+})
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+这种方式在Elixir的PLug框架中很流行 思想偏向于函数式范式  装饰器
+func loggingHandler(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        log.Printf("Started %s %s", r.Method, r.URL.Path)
+        next.ServeHTTP(w, r)
+        log.Printf("Comleted %s in %v", r.URL.Path, time.Since(start))
+    })
+}
+func main() {
+    http.Handle("/", loggingHandler(http.HandlerFunc(index)))
+    http.ListenAndServe(":8000", nil)
+}
+//loggingHandler 即是一个中间件函数 将请求的和完成的时间处理
+既然中间件是一种函数 并且签名都一样 那么很容易就联想到函数一层包一层的中间件 再添加一个函数 然后修改main函数
+func hook(next http.Handler) http.Handler{
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        log.Println("before hook")
+        next.ServeHTTP(w, r)
+        log.Println("after hook")
+    })
+}
+func main() {
+    http.Handle("/", hook(loggingHandler(http.HandlerFunc(index))))
+    http.ListenAndServe(":8000", nil)
+}
+函数调用形成了一条链 可以是在这条链上做很多事情
+*/
+/*
+总结
+通过对http包的源码学习 我们了解了Handler接口和ServeMux结构 并且知道如何配合他们实现go的中间件函数
+当然 对于几个约定名词 handler函数 handler处理器 和handler对象的理解 是掌握它们的关键因素 而handler处理器
+和handler对象的关系 恰恰又是go接口使用的经典例子 让go具有一些动态类型的特性
+了解http服务如何创建之后 处理请求和返回响应就是下一个故事 而实现处理逻辑恰恰在我们一直强调的ServeHTTP接口方法中
+接下来请求和响应相关的函数对象
 */
