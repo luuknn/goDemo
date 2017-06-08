@@ -1,18 +1,18 @@
 package main
 
-import (
-	"fmt"
-	"net/http"
-)
-
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "hello world")
-}
-
-func main() {
-	http.HandleFunc("/", IndexHandler)
-	http.ListenAndServe(":8080", nil)
-}
+//import (
+//	"fmt"
+//	"net/http"
+//)
+//
+//func IndexHandler(w http.ResponseWriter, r *http.Request) {
+//	fmt.Fprintln(w, "hello world")
+//}
+//
+//func main() {
+//	http.HandleFunc("/", IndexHandler)
+//	http.ListenAndServe(":8080", nil)
+//}
 
 /*
 Client -> Requests -> Multiplexer(router) -> handler ->Response ->Client
@@ -216,19 +216,19 @@ serve方法比较长 其主要职责 就是创建一个上下文对象 然后调
  c.setState(c.rwc,StateClosed)
  }
  }()
- 
+
  ...
- 
+
  for{
  w,err:=c.readRequest(ctx)
  if c.r.remain!=c.server.initialReadLimitSize(){
  //if we read any bytes off the wire ,we're active
  c.setState(c.rwc,StateActive)
  }
- ... 
+ ...
  }
  ...
- 
+
  serverHandler{c.server}.ServeHTTP(w,w.req)
  w.cancelCtx()
  if c.hijacked(){
@@ -342,30 +342,4 @@ pattern模式与实际url匹配的handler函数并返回
 提供ServeHTTP用来实现handler处理其函数 后者可以处理实际request并构造response
 
 ServeMux和handler处理器函数的连接桥梁就是handler接口ServeMux的ServeHTTP方法实现了寻找注册路由的handler的函数
-并调用该handler的ServeHTTP方法 ServeHTTP方法就是真正处理请求和构造响应的地方
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+并调用该handler的ServeHTTP方法 ServeHTTP方法就是真正处理请求和构造响应的地方*/
