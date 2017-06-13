@@ -1,0 +1,16 @@
+{{ define "layout" }}
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>layout</title>
+</head>
+<body>
+	<h3>This is layout</h3>
+	template data: {{ . }} {{ template "index" . }}
+	{{ with "world"}}
+        Now the dot is set to {{ . }}
+     {{ end }}
+</body>
+</html>
+{{ end }}
