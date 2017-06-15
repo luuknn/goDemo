@@ -1,86 +1,86 @@
 package main
 
-import (
-	"database/sql"
-	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"log"
-)
-
-type Post struct {
-	Id      int
-	Content string
-	Author  string
-}
-
-func (post *Post) Create() (err error) {
-	rs, err := Db.Exec("INSERT INTO posts (content,author) values(?,?)", post.Content, post.Author)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	id, err := rs.LastInsertId()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fmt.Println(id)
-	return
-}
-func (post *Post) Delete() (err error) {
-	rs, err := Db.Exec("DELETE FROM posts where id=?", post.Id)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	rows, err := rs.RowsAffected()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fmt.Println(rows)
-	return
-}
-func (post *Post) Update() (err error) {
-	rs, err := Db.Exec("Update posts SET author=? where id=?", post.Author, post.Id)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	rows, err := rs.RowsAffected()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fmt.Println(rows)
-	return
-}
-func RetrievePost(id int) (post Post, err error) {
-	post = Post{}
-	err = Db.QueryRow("SELECT id,content,author from posts where id=?", id).Scan(&post.Id, &post.Content, &post.Author)
-	return
-}
-func RetrievePosts() (posts []Post, err error) {
-	rows, err := Db.Query("SELECT id,content,author from posts")
-	for rows.Next() {
-		post := Post{}
-		err := rows.Scan(&post.Id, &post.Content, &post.Author)
-		if err != nil {
-			log.Println(err)
-		}
-		posts = append(posts, post)
-	}
-	rows.Close()
-	return
-
-}
-
-var Db *sql.DB
-
-func main() {
-	var err error
-	Db, err = sql.Open("mysql", "root:zxcvb110test@@tcp(rm-uf680nxer55d4wnm4o.mysql.rds.aliyuncs.com:3306)/cmistest?charset=utf8")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(RetrievePosts())
-	defer Db.Close()
-}
+//import (
+//	"database/sql"
+//	"fmt"
+//	_ "github.com/go-sql-driver/mysql"
+//	"log"
+//)
+//
+//type Post struct {
+//	Id      int
+//	Content string
+//	Author  string
+//}
+//
+//func (post *Post) Create() (err error) {
+//	rs, err := Db.Exec("INSERT INTO posts (content,author) values(?,?)", post.Content, post.Author)
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	id, err := rs.LastInsertId()
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	fmt.Println(id)
+//	return
+//}
+//func (post *Post) Delete() (err error) {
+//	rs, err := Db.Exec("DELETE FROM posts where id=?", post.Id)
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	rows, err := rs.RowsAffected()
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	fmt.Println(rows)
+//	return
+//}
+//func (post *Post) Update() (err error) {
+//	rs, err := Db.Exec("Update posts SET author=? where id=?", post.Author, post.Id)
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	rows, err := rs.RowsAffected()
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	fmt.Println(rows)
+//	return
+//}
+//func RetrievePost(id int) (post Post, err error) {
+//	post = Post{}
+//	err = Db.QueryRow("SELECT id,content,author from posts where id=?", id).Scan(&post.Id, &post.Content, &post.Author)
+//	return
+//}
+//func RetrievePosts() (posts []Post, err error) {
+//	rows, err := Db.Query("SELECT id,content,author from posts")
+//	for rows.Next() {
+//		post := Post{}
+//		err := rows.Scan(&post.Id, &post.Content, &post.Author)
+//		if err != nil {
+//			log.Println(err)
+//		}
+//		posts = append(posts, post)
+//	}
+//	rows.Close()
+//	return
+//
+//}
+//
+//var Db *sql.DB
+//
+//func main() {
+//	var err error
+//	Db, err = sql.Open("mysql", "root:zxcvb110test@@tcp(rm-uf680nxer55d4wnm4o.mysql.rds.aliyuncs.com:3306)/cmistest?charset=utf8")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	fmt.Println(RetrievePosts())
+//	defer Db.Close()
+//}
 
 /*
 持久化
