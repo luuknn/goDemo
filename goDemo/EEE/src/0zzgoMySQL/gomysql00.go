@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
+	"database/sql"
 	"fmt"
-	"io/ioutil"
+	_ "github.com/go-sql-driver/mysql"
+	"log"
 )
 
 type Post struct {
@@ -13,38 +13,73 @@ type Post struct {
 	Author  string
 }
 
-func store(data interface{}, filename string) {
-	buffer := new(bytes.Buffer)
-	encoder := gob.NewEncoder(buffer)
-	err := encoder.Encode(data)
+func (post *Post) Create() (err error) {
+	rs, err := Db.Exec("INSERT INTO posts (content,author) values(?,?)", post.Content, post.Author)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
-	err = ioutil.WriteFile(filename, buffer.Bytes(), 0600)
+	id, err := rs.LastInsertId()
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
+	fmt.Println(id)
+	return
+}
+func (post *Post) Delete() (err error) {
+	rs, err := Db.Exec("DELETE FROM posts where id=?", post.Id)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	rows, err := rs.RowsAffected()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(rows)
+	return
+}
+func (post *Post) Update() (err error) {
+	rs, err := Db.Exec("Update posts SET author=? where id=?", post.Author, post.Id)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	rows, err := rs.RowsAffected()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(rows)
+	return
+}
+func RetrievePost(id int) (post Post, err error) {
+	post = Post{}
+	err = Db.QueryRow("SELECT id,content,author from posts where id=?", id).Scan(&post.Id, &post.Content, &post.Author)
+	return
+}
+func RetrievePosts() (posts []Post, err error) {
+	rows, err := Db.Query("SELECT id,content,author from posts")
+	for rows.Next() {
+		post := Post{}
+		err := rows.Scan(&post.Id, &post.Content, &post.Author)
+		if err != nil {
+			log.Println(err)
+		}
+		posts = append(posts, post)
+	}
+	rows.Close()
+	return
 
 }
-func load(data interface{}, filename string) {
-	raw, err := ioutil.ReadFile(filename)
-	if err != nil {
-		panic(err)
-	}
-	buffer := bytes.NewBuffer(raw)
-	dec := gob.NewDecoder(buffer)
-	err = dec.Decode(data)
-	if err != nil {
-		panic(err)
-	}
 
-}
+var Db *sql.DB
+
 func main() {
-	post := Post{Id: 1, Content: "Hello World!", Author: "Vanyarpy"}
-	store(post, "post5")
-	var postRead Post
-	load(&postRead, "post5")
-	fmt.Println(postRead)
+	var err error
+	Db, err = sql.Open("mysql", "root:zxcvb110test@@tcp(rm-uf680nxer55d4wnm4o.mysql.rds.aliyuncs.com:3306)/cmistest?charset=utf8")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(RetrievePosts())
+	defer Db.Close()
 }
 
 /*
@@ -281,6 +316,149 @@ func main() {
 
 关于数据库又是一个很大的话题 我们先简单的讨论下sql 后续再针对mysql的操作做详细的介绍
 
+sql
+sql数据库做持久化是最习以为常的了 把数据写入数据库 根据数据库提供强大的查询工具获取数据 成为很多应用的基本模式 下面介绍一下golang使用mysqk数据库的
+增删改查(curd)功能
+连接
+golang封装了 database/sql标准库 它提供了用于处理sql相关的操作的接口 而接口的实现则交给了数据库驱动
+这样的设计还是很好 写代码逻辑的时候 不用考虑后端的具体数据库 即使迁移数据库类型的时候 也只要迁移相应的驱动即可
+不用修改代码 更多关于数据库的用法 我们在后面再讨论 现在先简单的创建一个数据库连接把
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"log"
+)
 
+var Db *sql.DB
+
+func main() {
+	var err error
+	Db, err = sql.Open("mysql", "root:111111@tcp(rm-uf680nxer55d4wnm4o.mysql.rds.aliyuncs.com:3306)/test?charset=utf8")
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println("yes")
+	}
+	defer Db.Close()
+}
+创建数据库连接之前 我们需要安装并导入驱动  这里我们使用了 mysql驱动
+
+sql.Open方法接收两个参数 第一个是数据库类型 第二个则是 数据库的连接方式字串 返回一个 *sql.DB的指针对象
+返回的Db对象 只是一个数据库操作的对象 它并不是一个连接 go封装了连接池 不会暴露给开发者
+当Db对象开始数据库操作的时候 go的连接池才会惰性的建立连接 查询完毕之后 又会释放连接
+连接会返回到连接池之中  更多关于数据库的操作  我们将会在后面的mysql中介绍
+
+增
+增加数据
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"log"
+)
+
+type Post struct {
+	Id      int
+	Content string
+	Author  string
+}
+
+func (post *Post) Create() (err error) {
+	rs, err := Db.Exec("INSERT INTO posts (content,author) values(?,?)", post.Content, post.Author)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	id, err := rs.LastInsertId()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(id)
+	return
+}
+
+var Db *sql.DB
+
+func main() {
+	var err error
+	Db, err = sql.Open("mysql", "root:zxcvb110test@@tcp(rm-uf680nxer55d4wnm4o.mysql.rds.aliyuncs.com:3306)/cmistest?charset=utf8")
+	if err != nil {
+		log.Fatal(err)
+	}
+	post := Post{
+		Content: "Hello world",
+		Author:  "Jianlingshih",
+	}
+	post.Create()
+	defer Db.Close()
+}
+Exec 的方法会执行一个sql语句  为了避免sql注入 mysql参数则使用？占位符 执行sql后会返回一个result对象
+后者有两个方法 LastInsertId 返回插入后记录的id值 RowsAffected返回影响的行数
+
+删
+删除和插入类似 同样执行Exec方法即可  例如删除刚刚插入的id为1的记录
+func (post *Post) Delete() (err error) {
+	rs, err := Db.Exec("DELETE FROM posts where id=?", post.Id)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	rows, err := rs.RowsAffected()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(rows)
+	return
+}
+改
+修改记录和插入删除类似 依然使用Exec方法即可
+func (post *Post) Update() (err error) {
+	rs, err := Db.Exec("Update posts SET author=? where id=?", post.Author, post.Id)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	rows, err := rs.RowsAffected()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(rows)
+	return
+}
+
+查
+curd中 最后一个就是r retrieve数据 查询获取数据的方式很多 总体分为两类 一类是获取单条记录 其次就是获取多条记录
+func RetrievePost(id int) (post Post, err error) {
+	post = Post{}
+	err = Db.QueryRow("SELECT id,content,author from posts where id=?", id).Scan(&post.Id, &post.Content, &post.Author)
+	return
+}
+获取单条记录比较简单 只需要定义一个结构 再查询结果后 Scan其值就好 这种读取的方式在C语言中很常见
+读取多条记录也大同小异 不同在于需要通过迭代才能把多个记录赋值
+func RetrievePosts() (posts []Post, err error) {
+	rows, err := Db.Query("SELECT id,content,author from posts")
+	for rows.Next() {
+		post := Post{}
+		err := rows.Scan(&post.Id, &post.Content, &post.Author)
+		if err != nil {
+			log.Println(err)
+		}
+		posts = append(posts, post)
+	}
+	rows.Close()
+	return
+
+}
+
+迭代rows的过程中 如果因为循环内的代码问题导致循环退出 此时数据库连接池并不知道连接的情况
+不会自动回收 因此需要手动指定rows.Close方法
+至此 对于sql数据库的基本操作都进行了介绍 golang的sql标准库的内容却远不如此
+后面我们还会如何更好地使用sql进行介绍 还会讨论其中连接池 连接释放 prepare语句
+和事务处理方面的内容
+
+总结
+数据持久化我们介绍了内存 文件和数据库三种持久化方案 其中内存并不是严格意义的持久化
+但是对于一些需要频繁操作 并且程序启动后就需要处理的数据 可以考虑内存持久化
+对于简单的配置 可以使用文件持久化 更多的时候 数据的持久化方案还是依托于数据库
+如今数据库种类繁多 无论sql还是nosql 都需要考虑具体的使用场景
+而无论什么场景 对数据的操作都可以归结为基本的CURD
 
 */
