@@ -234,7 +234,32 @@ log.Fatalln(err)
 golang的实现了连接池 处理prepare方式也需要特别注意 调用Prepare方法返回stmt的时候 golang会在
 某个空闲的连接上进行prepare语句 然后就把连接释放回到连接池  可是golang会记住这个连接 当需要执行参数的时候 就再次找到之前记住的连接进行执行 等到stmt.Close调用的时候 再释放该连接
 
+在执行参数的时候 如果记住的连接正处于忙碌阶段  此时 golang将会从新选一个新的空闲连接进行prepare(re-prepare)
+当然  即使是reprepare 同样也会遇到刚才的问题 那么将会一而再再而三的进行reprepare直到找到空闲连接进行查询的时候
 
+这种情况将会导致leak连接的情况 尤其是高并发的情况 将会导致大量的prepare过程
+因此使用stmt的情况需要仔细考虑应用场景 通常在应用程序中 多次执行同一个sql语句的情况并不多 因此减少prepare语句的使用
+
+之前有一个疑问 是不是所有sql语句都不能带占位符 因为这是prepare语句 只要看了以便database/sql和驱动的源码 才恍然大悟 对于
+query(prepare,args)的方式 正如我们前面所分析的  database/sql会使用 ds.si.Query(dargs)创建stmt 然后就立即执行
+prepare和参数 最后关闭stmt  整个过程都是同一个连接上完成 因此不存在reprepare的情况 当然也无法使用所谓的创建一次 执行多次的目的
+
+对于prepare的使用方式 基于其好处和缺点  我们将会在后面再讨论 目前需要注意的大致就是：
+1 单次查询不需要使用prepared 每次使用stmt语句都是三次网络请求次数 prepared execute close
+2不要循环中创建prepare语句      3  注意关闭stmt
+
+尽管会有reprepare过程  这些操作依然是database/sql帮我们所做的  与连接retry10次一样  开发者无需担心
+
+对于Query操作 如此 同理 Exec操作也一样
+
+总结
+目前我们学习database/sql提供两类查询操作 Query和Exec方法 他们都可以使用plaintext和prepare方式查询
+对于后者 可以有效的避免数据库注入  而prepare方式又可以有显示的声明stmt对象 也有隐藏的方式
+显示的创建stmt会有3次网络请求  创建 -执行 - 关闭  再批量操作 可以考虑这种做法  另外一种创建方式创建prepare后就
+执行  因此 不会因为reprepare导致高并发下的leak连接问题
+
+具体使用哪种方式 还得基于应用场景 安全过滤 和连接管理等考虑 至此 关于查询和执行操作已经介绍了很多
+关系型数据库的另外一个特性就是关系和事务处理  下一节 我们将会讨论database/sql的数据库事务功能
 
 
 
