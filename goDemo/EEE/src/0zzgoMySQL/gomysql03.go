@@ -1,9 +1,5 @@
 package main
 
-func main() {
-
-}
-
 /*
 Prepared 剖析
 prepare
