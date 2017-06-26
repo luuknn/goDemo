@@ -222,10 +222,88 @@ router.GET("/upload", func(c *gin.Context) {
 	c.HTML(http.StatusOK, "upload.html", gin.H{})
 })
 使用LoadHTMLClob定义模板文件路径
+*/
 
+/*
+参数绑定
+我们已经见识了 x-www-form-urlencoded 类型的参数处理  现在越来越多的应用习惯 使用JSON来通信
+也就是无论返回的response还是提交的request 其content-type类型都是application/json的格式
+而对于一些旧的web表单页面还是x-www-form-urlencoded的形式 这就需要我们的服务器能hold住
+这多种content-type的参数了 golang中要处理并非易事 好在有gin  他们的model bind功能非常强大
 
+type User struct {
+Username string `form:"username" json:"username" binding:"required"`
+Passwd string `form:"passwd" json:"passwd" binding:"required"`
+Age int `form:"age" json:"age"`
+}
+func main(){
+router :=gin.Default()
+router.POST("/login",func(c *gin.Context))
+var user User
+var err error
+contentType :=c.Request.Header.Get("Content-Type")
+switch contentType{
+case "application/json":
+ err=c.BindJSON(&user)
+ case "application/x-www-form-urlencoded":
+ err=c.BindWith(&user,bingding.Form)
+}
+if err!=nil{
+fmt.Println(err)
+log.Fatal(err)
+}
+c.JSON(http.StatusOK,gin.H{
+"user":user.Username,
+"passwd":user.Passwd,
+"age":user.Age
+})
+})
+}
+先定义一个User模型结构体 然后针对客户端的content-type 一次使 BindJSON 和BindWith方法
+可以看到 结构体中 设置了 binding标签字段 (username和passwd) 如果没传会抛出错误 非binding的字段
+age 对于客户端 没有传 user结构会用零值填充 对于User结构没有的参数 会自动被忽略
+使用json还需要注意一点 json是有数据类型的  因此 对于 {"passwd":"123"} 和 {"passwd":123}是不同的数据类型
+解析需要符合 对应的数据类型 否则会出错
+当然 gin还提供了更加高级的方法 c.Bind 它会content-type字段推断 是bind表单还是json参数
+router.POST("/login",fun(c *gin.Context){
+var user User
+err:=c.Bind(&user)
+if err!=nil{
+fmt.Println(err)
+log.Fatal(err)
+}
+c.JSON(http.StatusOK,gin.H{
+"username":user.Username,
+"passwd":user.passwd,
+"age":user.Age,
+})
+})
+*/
 
+/*
+多格式渲染
+既然请求可以使用不同的content-type 响应也是如此 通常会有html text plain json和xml等
+gin提供了很优雅的渲染方法  到目前为止 我们已经见识了c.String c.JSON c.HTML 下面介绍下c.XML
+router.GET("/render",func(c *gin.Context){
+contentType :=c.DefaultQuery("content-type","json")
+if contentType == "json" {
+		c.JSON(http.StatusOK, gin.H{
+			"user":   "rsj217",
+			"passwd": "123",
+		})
+	} else if contentType == "xml" {
+		c.XML(http.StatusOK, gin.H{
+			"user":   "rsj217",
+			"passwd": "123",
+		})
+	}
+})
 
+重定向
+gin对于重定向 的请求 相当简单 调用上下文的Rediret方法
+router.GET("/redict/google", func(c *gin.Context) {
+	c.Redirect(http.StatusMovedPermanently, "https://google.com")
+})
 
 
 
