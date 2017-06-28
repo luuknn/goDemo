@@ -1,47 +1,48 @@
 package main
 
-//import (
-//	"database/sql"
-//	_ "github.com/go-sql-driver/mysql"
-//	"log"
-//)
-//
-//func main() {
-//	var err error
-//	Db, err := sql.Open("mysql", "root:zxcvb110test@@tcp(rm-uf680nxer55d4wnm4o.mysql.rds.aliyuncs.com:3306)/cmistest?charset=utf8")
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	defer Db.Close()
-//	_, err = Db.Exec("CREATE TABLE IF NOT EXISTS cmistest.hello(word varchar(50))")
-//	if err != nil {
-//		log.Fatalln(err)
-//	}
-//	rs, err := Db.Exec("insert into cmistest.hello(word) values ('hellp ')")
-//	if err != nil {
-//		log.Fatalln(err)
-//	}
-//	rowCount, err := rs.RowsAffected()
-//	if err != nil {
-//		log.Fatalln(err)
-//	}
-//	log.Printf("inserted %d rows", rowCount)
-//
-//	rows, err := Db.Query("select word from cmistest.hello")
-//	if err != nil {
-//		log.Fatalln(err)
-//	}
-//	for rows.Next() {
-//		var s string
-//		err = rows.Scan(&s)
-//		if err != nil {
-//			log.Fatalln(err)
-//		}
-//		log.Printf("found row containing %q", s)
-//	}
-//	rows.Close()
-//}
+/*
+import (
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
+	"log"
+)
+
+func main() {
+	var err error
+	Db, err := sql.Open("mysql", "root:zxcvb110test@@tcp(rm-uf680nxer55d4wnm4o.mysql.rds.aliyuncs.com:3306)/cmistest?charset=utf8")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer Db.Close()
+	_, err = Db.Exec("CREATE TABLE IF NOT EXISTS cmistest.hello(word varchar(50))")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	rs, err := Db.Exec("insert into cmistest.hello(word) values ('hellp ')")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	rowCount, err := rs.RowsAffected()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Printf("inserted %d rows", rowCount)
+
+	rows, err := Db.Query("select word from cmistest.hello")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for rows.Next() {
+		var s string
+		err = rows.Scan(&s)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		log.Printf("found row containing %q", s)
+	}
+	rows.Close()
+}*/
 
 /*
 Golang mysql 连接与连接池
