@@ -1,55 +1,45 @@
 package main
 
-import (
-	"fmt"
-	"time"
-)
-
-func main() {
-	//初始化通道
-	ch11 := make(chan int, 10000)
-	sign := make(chan int, 1)
-	//给ch11 通道写入数据
-	for i := 0; i < 10000; i++ {
-		ch11 <- i
-	}
-	//关闭ch11通道
-	//close(ch11) //为了看效果先注释掉
-	//单独起一个goroutine 执行select
-	go func() {
-		var e int
-		ok := true
-		for {
-			select {
-			case e, ok = <-ch11:
-				if !ok {
-					fmt.Println("End.")
-					break
-				}
-				fmt.Printf("ch11 ->%d\n", e)
-			case ok = <-func() chan bool {
-				//经过大约1ms后 该接收语句会从timeout接收到一个新元素 并赋值给ok
-				//从而恰当地执行了针对单个操作的超时子流程 恰当的结束了当前的for循环
-				timeout := make(chan bool, 1)
-				go func() {
-					time.Sleep(time.Millisecond)
-					timeout <- false
-				}()
-				return timeout
-			}():
-				fmt.Println("timeout..")
-				break
-			}
-			//通道关闭后退出for循环
-			if !ok {
-				sign <- 0
-				break
-			}
-		}
-	}()
-	//惯用手法 读取sign通道数据 为了等待select的goroutine的执行
-	<-sign
-}
+//import (
+//	"fmt"
+//	"time"
+//)
+//
+//func main() {
+//	unbufChan := make(chan int)
+//	sign := make(chan byte, 2)
+//	go func() {
+//		for i := 0; i < 10; i++ {
+//			select {
+//			case unbufChan <- i:
+//			case unbufChan <- i + 10:
+//			}
+//			fmt.Printf("The %d select is selected\n", i)
+//			time.Sleep(time.Second)
+//		}
+//		close(unbufChan)
+//		fmt.Println("The channel is closed.")
+//		sign <- 0
+//
+//	}()
+//	go func() {
+//	loop:
+//		for {
+//			select {
+//			case e, ok := <-unbufChan:
+//				if !ok {
+//					fmt.Println("Closed channel.")
+//					break loop
+//				}
+//				fmt.Printf("e: %d\n", e)
+//				time.Sleep(2 * time.Second)
+//			}
+//		}
+//		sign <- 1
+//	}()
+//	<-sign
+//	<-sign
+//}
 
 /*
 select
@@ -290,27 +280,137 @@ func main() {
 }
 
 ####非缓冲的Channel
+我们在初始化一个通道时  将其容量设置成0  或者直接忽略对容量的设置 那么就称之为非缓冲通道
+ch1:=make(chan int,1)//缓冲通道
+ch2:=make(chan int,0)//非缓冲通道
+ch3:=make(chan int)//非缓冲通道
+向此类通道发送元素值的操作会被阻塞 直到至少有一个针对该通道的接收操作开始进行为止
+从此类通道接收元素值的操作会被阻塞 直到至少有一个针对该通道的发送操作开始进行为止
+针对非缓冲通道的接收操作会在与之相应的发送操作完成之前完成
 
+对于第三条要特别注意 发送操作在向非缓冲通道发送元素值的时候 会等待能够接收元素值的那个接收操作
+并且确保该元素值被成功接收 它才会真正的完成执行 而缓冲通道中 刚好相反 由于元素值的传递是异步的 所以
+发送操作在成功向通道发送元素值后就会立即结束 它不会关心是否有接收操作
+##示例一
+实现多个goroutine之间的同步
+import (
+	"fmt"
+	"time"
+)
 
+func main() {
+	unbufChan := make(chan int)
+	//unbufChan:=make(chan int,1)有缓冲容量
+	//启用一个goroutine接收元素值操作
+	go func() {
+		fmt.Println("Sleep a second...")
+		time.Sleep(time.Second) //休息1s
+		num := <-unbufChan      //接收unbufChan通道元素值
+		fmt.Printf("Received a integer %d .\n", num)
 
+	}()
+	num := 1
+	fmt.Printf("Send integer %d ...\n", num)
+	//发送元素值
+	unbufChan <- num
+	fmt.Println("Done.")
+}
+在非缓冲channel中 从打印数据可以看出主goroutine的发送操作在等待一个能够与之配对的接收操作
+配对成功后 元素值1 才得以经由unbufChan通道被从主goroutine传递至那个新的goroutine
 
+####select与非缓冲通道
+与操作缓冲通道的select相比 它被阻塞的概率一般会大很多  只有存在可配对的操作的时候 传递元素值的动作才能
+真正的开始
+示例
+发送操作间隔1s 接收操作间隔2s
+分别向unbufChan通道发送小于10和大于等于10的整数  这样更容易从打印结果分辨出配对的时候哪个case被选中了
+下列案例两个case是被随机选择的
+import (
+	"fmt"
+	"time"
+)
 
+func main() {
+	unbufChan := make(chan int)
+	sign := make(chan byte, 2)
+	go func() {
+		for i := 0; i < 10; i++ {
+			select {
+			case unbufChan <- i:
+			case unbufChan <- i + 10:
+			default:
+				fmt.Println("default!")
+			}
+			time.Sleep(time.Second)
+		}
+		close(unbufChan)
+		fmt.Println("The channel is closed.")
+		sign <- 0
 
+	}()
+	go func() {
+	loop:
+		for {
+			select {
+			case e, ok := <-unbufChan:
+				if !ok {
+					fmt.Println("Closed channel.")
+					break loop
+				}
+				fmt.Printf("e: %d\n", e)
+				time.Sleep(2 * time.Second)
+			}
+		}
+		sign <- 1
+	}()
+	<-sign
+	<-sign
+}
 
+default case 会在收发操作无法配对的情况下被选中并执行 在这里它被选中的概率是50%
+上面的示例给予了我们这样一个启发 使用非缓冲通道能够让我们非常方便地在接收端对发送端的操作频率实施控制
+可以尝试去掉defaultcase 看看打印结果 代码稍作修改如下
+import (
+	"fmt"
+	"time"
+)
 
+func main() {
+	unbufChan := make(chan int)
+	sign := make(chan byte, 2)
+	go func() {
+		for i := 0; i < 10; i++ {
+			select {
+			case unbufChan <- i:
+			case unbufChan <- i + 10:
+			}
+			fmt.Printf("The %d select is selected\n", i)
+			time.Sleep(time.Second)
+		}
+		close(unbufChan)
+		fmt.Println("The channel is closed.")
+		sign <- 0
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	}()
+	go func() {
+	loop:
+		for {
+			select {
+			case e, ok := <-unbufChan:
+				if !ok {
+					fmt.Println("Closed channel.")
+					break loop
+				}
+				fmt.Printf("e: %d\n", e)
+				time.Sleep(2 * time.Second)
+			}
+		}
+		sign <- 1
+	}()
+	<-sign
+	<-sign
+}
+####总结
+上面两个例子 第一个有default case 无法配对时执行该语句 而第二个没有default case 无法配对case时
+select将阻塞 直到某个case可以运行 上述示例 是直到unbufChan数据被读取操作 不会重新对channel或值进行求值
 */
