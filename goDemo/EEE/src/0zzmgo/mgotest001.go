@@ -13,7 +13,7 @@ package main
 //}
 //
 //func main() {
-//	session, err := mgo.Dial("106.14.181.47")
+//	session, err := mgo.Dial("106.14.181.48")
 //	if err != nil {
 //		panic(err)
 //	}
